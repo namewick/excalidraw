@@ -33,6 +33,9 @@ const DILATION_RADIUS = 6;
 const ALPHA_THRESHOLD = 16; // ink vs. empty on the transparent-background raster
 const RDP_EPSILON = 1.5; // contour simplification tolerance
 const MIN_FILL_PIXELS = 64; // ignore noise pockets
+// Tuck the fill this many px UNDER the strokes so its raster-jagged edge hides
+// behind the smooth stroke and no sub-pixel gap shows at the boundary.
+const EDGE_OVERFILL = 4;
 
 const clampInt = (v: number, lo: number, hi: number) =>
   v < lo ? lo : v > hi ? hi : v;
@@ -336,6 +339,17 @@ export const maskToFillContour = (
     cy,
     (i) => barrier[i] === 0 && exterior[i] === 0,
   ).mask;
+
+  // Tuck the fill under the strokes: grow the region, keep the growth only where
+  // it lands on ink (never past the stroke to the outside). The jagged raster
+  // edge then hides behind the smooth stroke and the sub-pixel gap left by
+  // contour tracing + RDP disappears.
+  const over = dilateBinary(region, w, h, EDGE_OVERFILL);
+  for (let i = 0; i < w * h; i++) {
+    if (over[i] && barrier[i]) {
+      region[i] = 1;
+    }
+  }
 
   const contour = rdp(traceContour(region, w, h), eps);
   if (contour.length < 6) {

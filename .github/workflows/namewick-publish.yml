@@ -1,0 +1,64 @@
+# Namewick fork: build @excalidraw/excalidraw and publish it to GitHub Packages
+# as @namewick/excalidraw so the namewick app can consume the fork without
+# vendoring a binary into its repo.
+#
+# Trigger: push a tag like `excalidraw-nw-0.18.1-nw.1`, or run manually
+# (workflow_dispatch) with a version input. The version is what lands on the
+# registry; keep the base (0.18.1) aligned with the upstream tag this branch is
+# built from and bump the `-nw.N` prerelease suffix per publish.
+name: Publish @namewick/excalidraw
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'npm version to publish (e.g. 0.18.1-nw.1)'
+        required: true
+        default: '0.18.1-nw.1'
+  push:
+    tags:
+      - 'excalidraw-nw-*'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20 # upstream engines require Node 18–22
+          registry-url: https://npm.pkg.github.com
+          scope: '@namewick'
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_REF_NAME#excalidraw-nw-}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install
+        run: yarn install --frozen-lockfile
+
+      - name: Build the package
+        run: yarn build:package
+
+      - name: Rename + version for the namewick scope
+        working-directory: packages/excalidraw
+        run: |
+          npm pkg set name='@namewick/excalidraw'
+          npm pkg set repository='git+https://github.com/namewick/excalidraw.git'
+          npm version --no-git-tag-version --allow-same-version "${{ steps.ver.outputs.version }}"
+
+      - name: Publish to GitHub Packages
+        working-directory: packages/excalidraw
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

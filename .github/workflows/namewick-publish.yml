@@ -31,7 +31,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20 # upstream engines require Node 18–22
+          # Node 22: upstream package engines say 18–22, but a transitive dep
+          # (chevrotain) requires >=22, so 22 is the only version that fits both.
+          node-version: 22
           registry-url: https://npm.pkg.github.com
           scope: '@namewick'
 
@@ -45,7 +47,7 @@ jobs:
           fi
 
       - name: Install
-        run: yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile --ignore-engines
 
       - name: Build the package
         run: yarn build:package

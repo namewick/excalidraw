@@ -6382,7 +6382,7 @@ class App extends React.Component<AppProps, AppState> {
       height: contour.height,
       points: contour.points,
       backgroundColor: fillColor,
-      fillStyle: "solid",
+      fillStyle: this.state.currentItemFillStyle,
       strokeColor: "transparent",
       roughness: 0,
       roundness: null,

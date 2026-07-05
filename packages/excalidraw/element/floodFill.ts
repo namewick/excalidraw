@@ -426,9 +426,15 @@ export const computeFloodFillContour = async ({
     pMaxY = Math.max(pMaxY, scenePts[i + 1]);
   }
 
+  // Excalidraw requires linear elements normalized so points[0] === (0,0):
+  // anchor x,y at the FIRST contour point, not the bbox min corner.
+  const originX = scenePts[0];
+  const originY = scenePts[1];
   const points: LocalPoint[] = [];
   for (let i = 0; i < scenePts.length; i += 2) {
-    points.push(pointFrom<LocalPoint>(scenePts[i] - pMinX, scenePts[i + 1] - pMinY));
+    points.push(
+      pointFrom<LocalPoint>(scenePts[i] - originX, scenePts[i + 1] - originY),
+    );
   }
   // close the loop exactly so isPathALoop() is satisfied
   const first = points[0];
@@ -441,9 +447,9 @@ export const computeFloodFillContour = async ({
   }
 
   return {
-    x: pMinX,
-    y: pMinY,
-    width: pMaxX - pMinX,
+    x: originX,
+    y: originY,
+    width: pMaxX - pMinX, // bbox extent (invariant under the anchor shift)
     height: pMaxY - pMinY,
     points,
   };

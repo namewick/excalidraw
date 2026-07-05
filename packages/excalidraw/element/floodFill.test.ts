@@ -54,6 +54,22 @@ describe("floodFill pure core", () => {
     expect(contour).not.toBeNull();
     expect((contour as number[]).length).toBeGreaterThanOrEqual(6);
   });
+
+  it("fills flush to the barrier — no r-px inset at the edges", () => {
+    // ring at [40..216]; inner edges ~41/215. The fill must reach within a few
+    // px, NOT be inset by r (~47/209) the way the old dilate-back opening was.
+    const contour = maskToFillContour(ringWithGap(0), W, H, 128, 128, opts);
+    expect(contour).not.toBeNull();
+    const c = contour as number[];
+    let minX = Infinity;
+    let maxX = -Infinity;
+    for (let i = 0; i < c.length; i += 2) {
+      minX = Math.min(minX, c[i]);
+      maxX = Math.max(maxX, c[i]);
+    }
+    expect(minX).toBeLessThan(45);
+    expect(maxX).toBeGreaterThan(211);
+  });
 });
 
 describe("dilateBinary", () => {

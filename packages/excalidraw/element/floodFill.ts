@@ -318,14 +318,24 @@ export const maskToFillContour = (
     return null; // open to the outside, or too small
   }
 
-  // Grow the fill back by r and clip to the ORIGINAL ink, so the fill meets the
-  // strokes with no r-px seam (dilation had eaten into the interior).
-  const grown = dilateBinary(interior.mask, w, h, r);
-  const fill = new Uint8Array(w * h);
-  for (let i = 0; i < w * h; i++) {
-    fill[i] = grown[i] && !barrier[i] ? 1 : 0;
-  }
-  const region = floodRegion(w, h, cx, cy, (i) => fill[i] === 1).mask;
+  // The open exterior: border-connected clear space on the gap-bridged barrier.
+  // The padded border guarantees (0,0) is clear, so seed from there.
+  const exterior = floodRegion(w, h, 0, 0, (i) => dil[i] === 0).mask;
+
+  // Fill FLUSH to the original strokes: every non-ink pixel reachable from the
+  // click without entering the open exterior. Filling against the *undilated*
+  // barrier means the edge meets the strokes with no r-px inset — the dilation
+  // is used only to bridge gaps and define the exterior, never as the fill
+  // boundary (dilate-then-erode-back is a morphological opening that rounds
+  // convex edges inward). A real gap leaks only a ~r-px tongue into the barrier
+  // band, which sits behind the strokes anyway.
+  const region = floodRegion(
+    w,
+    h,
+    cx,
+    cy,
+    (i) => barrier[i] === 0 && exterior[i] === 0,
+  ).mask;
 
   const contour = rdp(traceContour(region, w, h), eps);
   if (contour.length < 6) {

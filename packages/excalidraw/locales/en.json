@@ -283,6 +283,7 @@
     "arrow": "Arrow",
     "line": "Line",
     "freedraw": "Draw",
+    "fill": "Fill",
     "text": "Text",
     "library": "Library",
     "lock": "Keep selected tool active after drawing",
@@ -506,6 +507,8 @@
   },
   "toast": {
     "addedToLibrary": "Added to library",
+    "fillNoRegion": "Click inside an area closed off by your strokes to fill it.",
+    "fillEmptyCanvas": "Draw a closed shape first, then use the fill tool inside it.",
     "copyStyles": "Copied styles.",
     "copyToClipboard": "Copied to clipboard.",
     "copyToClipboardAsPng": "Copied {{exportSelection}} to clipboard as PNG\n({{exportColorScheme}})",

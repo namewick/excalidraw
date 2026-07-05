@@ -146,6 +146,7 @@ import {
   newIframeElement,
   newArrowElement,
 } from "../element/newElement";
+import { computeFloodFillContour } from "../element/floodFill";
 import {
   hasBoundTextElement,
   isArrowElement,
@@ -6326,6 +6327,72 @@ class App extends React.Component<AppProps, AppState> {
     }
   }
 
+  private handleFillOnPointerDown = async (
+    event: React.PointerEvent<HTMLElement>,
+  ) => {
+    const revertTool = () => {
+      if (!this.state.activeTool.locked) {
+        this.setState({
+          activeTool: updateActiveTool(this.state, { type: "selection" }),
+        });
+      }
+    };
+
+    const elements = this.scene.getNonDeletedElements();
+    if (elements.length === 0) {
+      this.setToast({ message: t("toast.fillEmptyCanvas"), closable: true });
+      revertTool();
+      return;
+    }
+
+    const { x: sceneX, y: sceneY } = viewportCoordsToSceneCoords(
+      event,
+      this.state,
+    );
+
+    let contour = null;
+    try {
+      contour = await computeFloodFillContour({
+        elements,
+        appState: this.state,
+        files: this.files,
+        sceneX,
+        sceneY,
+      });
+    } catch (error) {
+      console.error(error);
+    }
+
+    if (!contour) {
+      this.setToast({ message: t("toast.fillNoRegion"), closable: true });
+      revertTool();
+      return;
+    }
+
+    const fillColor =
+      this.state.currentItemBackgroundColor !== "transparent"
+        ? this.state.currentItemBackgroundColor
+        : this.state.currentItemStrokeColor;
+
+    const fillElement = newLinearElement({
+      type: "line",
+      x: contour.x,
+      y: contour.y,
+      width: contour.width,
+      height: contour.height,
+      points: contour.points,
+      backgroundColor: fillColor,
+      fillStyle: "solid",
+      strokeColor: "transparent",
+      roughness: 0,
+      roundness: null,
+    });
+
+    this.scene.insertElementAtIndex(fillElement, 0);
+    this.store.shouldCaptureIncrement();
+    revertTool();
+  };
+
   private handleCanvasPointerDown = (
     event: React.PointerEvent<HTMLElement>,
   ) => {
@@ -6511,6 +6578,15 @@ class App extends React.Component<AppProps, AppState> {
 
     // don't select while panning
     if (gesture.pointers.size > 1) {
+      return;
+    }
+
+    // Fill (paint-bucket) tool: a single click that flood-fills the enclosed
+    // region under the cursor and inserts one filled polygon behind the
+    // strokes. It has no drag, so handle it here and skip the selection /
+    // element-drawing machinery below.
+    if (this.state.activeTool.type === "fill") {
+      void this.handleFillOnPointerDown(event);
       return;
     }
 

@@ -19,6 +19,7 @@ import {
 } from "@excalidraw/utils/geometry/shape";
 import {
   ArrowIcon,
+  bucketFillIcon,
   DiamondIcon,
   EllipseIcon,
   EraserIcon,
@@ -99,6 +100,13 @@ export const SHAPES = [
     value: "freedraw",
     key: [KEYS.P, KEYS.X],
     numericKey: KEYS["7"],
+    fillable: false,
+  },
+  {
+    icon: bucketFillIcon,
+    value: "fill",
+    key: KEYS.B,
+    numericKey: undefined,
     fillable: false,
   },
   {
